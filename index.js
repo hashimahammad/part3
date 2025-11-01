@@ -8,67 +8,72 @@ app.use(express.static('dist'))
 
 app.use(express.json())
 
-morgan.token('data',(req)=>{
-    return JSON.stringify(req.body)
+morgan.token('data',(req) => {
+  return JSON.stringify(req.body)
 })
 
 app.use(
-  morgan(":method :url :status :res[content-length] - :response-time ms :data")
-);
+  morgan(':method :url :status :res[content-length] - :response-time ms :data')
+)
 
-app.get('/api/persons',(req,res, next)=>{
+app.get('/api/persons',(req,res, next) => {
   Person.find({}).then(persons => {
     res.json(persons)
   })
-  .catch(error => next(error))
+    .catch(error => next(error))
 })
 
 app.get('/info', (req, res, next) => {
-  const now = new Date();
+  const now = new Date()
 
   Person.find({})
     .then(persons => {
-      const pCount = persons.length;
+      const pCount = persons.length
       res.send(`
         <div>
           <p>Phonebook has info for ${pCount} people</p>
           <p>${now.toString()}</p>
         </div>
-      `);
+      `)
     })
     .catch(error => next(error))
 
 })
 
 app.get('/api/persons/:id', (req, res, next) => {
-  const id = req.params.id;
+  const id = req.params.id
 
   Person.findById(id)
     .then(person => {
       if (person) {
-        res.json(person);        
+        res.json(person)
       } else {
-        res.status(404).end();   
+        res.status(404).end()
       }
     })
     .catch(error => {
       next(error)
-      res.status(400).end();
+      res.status(400).end()
     })
 })
 
 app.post('/api/persons', (req, res, next) => {
-  const body = req.body;
+  const body = req.body
 
   if (!body.name || !body.number) {
-    return res.status(400).json({ error: "Name or number missing" });
+    return res.status(400).json({ error: 'Name or number missing' })
   }
 
   Person.findOne({ name: body.name })
     .then(existingPerson => {
       if (existingPerson) {
-        
-        
+        existingPerson.number = body.number
+        existingPerson.save()
+          .then(updatedPerson => {
+            res.json(updatedPerson)
+          })
+          .catch(error => next(error))
+        return
       }
 
       const person = new Person({
@@ -78,7 +83,7 @@ app.post('/api/persons', (req, res, next) => {
 
       person.save()
         .then(savedPerson => {
-          res.json(savedPerson);
+          res.json(savedPerson)
         })
         .catch(error => {
           next(error)
@@ -91,29 +96,29 @@ app.post('/api/persons', (req, res, next) => {
     })
 })
 
-app.delete('/api/persons/:id',(req,res)=>{
+app.delete('/api/persons/:id',(req,res,next) => {
   Person.findByIdAndDelete(req.params.id)
-  .then(result => {
-    res.status(204).end()
-  })
-  .catch(error => next(error))
+    .then(() => {
+      res.status(204).end()
+    })
+    .catch(error => next(error))
 })
 
-app.put('/api/persons/:id',(req, res, next)=>{
-  const {name, number} = req.body
+app.put('/api/persons/:id',(req, res, next) => {
+  const { name, number } = req.body
 
-  const newPerson = {name,number}
+  const newPerson = { name,number }
 
-  Person.findByIdAndUpdate(req.params.id, newPerson,{new: true, runValidators:true, context:'query'})
-  .then(updated => {
-    if(updated){
-      res.json(updated)
-    }
-    else{
-      res.status(404).end()
-    }
-  })
-  .catch(error => next(error))
+  Person.findByIdAndUpdate(req.params.id, newPerson,{ new: true, runValidators:true, context:'query' })
+    .then(updated => {
+      if(updated){
+        res.json(updated)
+      }
+      else{
+        res.status(404).end()
+      }
+    })
+    .catch(error => next(error))
 
 })
 
@@ -124,7 +129,7 @@ const errorHandler = (error, request, response, next) => {
     return response.status(400).send({ error: 'malformatted id' })
   }
   else if (error.name === 'ValidationError') {
-    return response.status(400).json({ error: error.message }) 
+    return response.status(400).json({ error: error.message })
   }
   next(error)
 }
